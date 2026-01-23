@@ -1,0 +1,393 @@
+basePath: /api
+definitions:
+  main.APIKey:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      key:
+        type: string
+      label:
+        type: string
+    type: object
+  main.Record:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      record_key:
+        type: string
+      tenant_id:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      value:
+        type: number
+    type: object
+  main.Tenant:
+    properties:
+      created_at:
+        type: string
+      home_dir:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      public_key:
+        type: string
+      tenant_id:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:9090
+info:
+  contact: {}
+  description: Multi-tenant SFTP management with S3-backed storage and automatic CSV
+    ingestion into a records table.
+  title: SFTPGo Manager API
+  version: "1.0"
+paths:
+  /auth/hook:
+    post:
+      consumes:
+      - application/json
+      description: Called by SFTPGo to authenticate SFTP users. Not for direct use.
+      parameters:
+      - description: Auth request from SFTPGo
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            ip:
+              type: string
+            password:
+              type: string
+            protocol:
+              type: string
+            public_key:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SFTPGo user JSON
+          schema:
+            type: object
+        "403":
+          description: Authentication failed
+          schema:
+            type: string
+      summary: SFTPGo external auth hook
+      tags:
+      - hooks
+  /events/upload:
+    post:
+      consumes:
+      - application/json
+      description: Called by SFTPGo after a file upload. If the file is a .csv, it
+        is asynchronously downloaded from S3 and parsed into the records table.
+      parameters:
+      - description: SFTPGo event payload
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              status:
+                type: string
+            type: object
+      summary: SFTPGo upload event hook
+      tags:
+      - hooks
+  /keys:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new API key for authenticating subsequent requests. No
+        auth required.
+      parameters:
+      - description: Optional label
+        in: body
+        name: body
+        schema:
+          properties:
+            label:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/main.APIKey'
+        "500":
+          description: Internal Server Error
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      summary: Bootstrap a new API key
+      tags:
+      - keys
+  /tenants:
+    get:
+      description: Returns all registered tenants.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Tenant'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all tenants
+      tags:
+      - tenants
+    post:
+      consumes:
+      - application/json
+      description: Creates a new SFTP tenant with an auto-generated tenant_id. The
+        tenant_id becomes the S3 key prefix for file isolation. A password is auto-generated
+        if not provided.
+      parameters:
+      - description: Tenant details (only username required)
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            password:
+              type: string
+            public_key:
+              type: string
+            username:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            properties:
+              password:
+                type: string
+              tenant:
+                $ref: '#/definitions/main.Tenant'
+              tenant_id:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "502":
+          description: Bad Gateway
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new tenant
+      tags:
+      - tenants
+  /tenants/{id}:
+    delete:
+      description: Removes a tenant from both the local DB and SFTPGo.
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              status:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a tenant
+      tags:
+      - tenants
+    get:
+      description: Returns a single tenant by database ID.
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.Tenant'
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get tenant by ID
+      tags:
+      - tenants
+  /tenants/{id}/keys:
+    put:
+      consumes:
+      - application/json
+      description: Replaces the SSH public key for a tenant in both the local DB and
+        SFTPGo.
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New public key
+        in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            public_key:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              status:
+                type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update tenant's SSH public key
+      tags:
+      - tenants
+  /tenants/{id}/records:
+    get:
+      description: Returns all records ingested from CSV uploads for a given tenant.
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/main.Record'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            properties:
+              error:
+                type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List records for a tenant
+      tags:
+      - records
+  /tenants/{id}/validate:
+    post:
+      description: Checks whether a tenant's SFTP account is active and valid in SFTPGo.
+      parameters:
+      - description: Tenant ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              username:
+                type: string
+              valid:
+                type: boolean
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate tenant in SFTPGo
+      tags:
+      - tenants
+securityDefinitions:
+  BearerAuth:
+    description: Enter "Bearer <api_key>"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
