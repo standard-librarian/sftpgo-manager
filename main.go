@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to init db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	sftpgoClient := NewSFTPGoClient(cfg.SFTPGoURL, cfg.AdminUser, cfg.AdminPass)
 

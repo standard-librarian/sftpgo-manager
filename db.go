@@ -139,7 +139,7 @@ func (db *DB) ListTenants() ([]Tenant, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list tenants: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tenants []Tenant
 	for rows.Next() {
@@ -224,7 +224,7 @@ func (db *DB) ListRecords(tenantID string) ([]Record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list records: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var records []Record
 	for rows.Next() {
