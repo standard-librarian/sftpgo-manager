@@ -4,6 +4,117 @@ Go backend for multi-tenant SFTP user management. Each tenant gets an isolated S
 
 Built on top of [SFTPGo](https://github.com/drakkan/sftpgo) for SFTP and [MinIO](https://min.io/) for S3-compatible object storage.
 
+## Architecture
+
+```mermaid
+graph TB
+    Admin["Admin / API Client"]
+    SFTPUser["SFTP Client"]
+
+    subgraph Docker Compose
+        subgraph "Backend :9090"
+            API["REST API<br/>/api/tenants, /api/keys"]
+            Auth["Auth Middleware<br/>Bearer API Key"]
+            Hooks["SFTPGo Hooks<br/>/api/auth/hook<br/>/api/events/upload"]
+            Worker["CSV Worker<br/>async goroutine"]
+            SQLite[("SQLite<br/>tenants, records,<br/>api_keys")]
+        end
+
+        subgraph "SFTPGo :2022 / :8080"
+            SFTPD["SFTP Server"]
+            SFTPGoAPI["Admin API"]
+        end
+
+        subgraph "MinIO :9000"
+            S3["S3 Storage<br/>bucket: sftpgo<br/>prefix: tenant_id/"]
+        end
+    end
+
+    Admin -->|"HTTP + API key"| Auth
+    Auth --> API
+    API -->|"CRUD tenants"| SQLite
+    API -->|"Create/Delete user"| SFTPGoAPI
+
+    SFTPUser -->|"SFTP :2022"| SFTPD
+    SFTPD -->|"external auth hook"| Hooks
+    Hooks -->|"lookup tenant"| SQLite
+    SFTPD -->|"read/write files"| S3
+    SFTPD -->|"upload event hook"| Hooks
+    Hooks -->|"trigger"| Worker
+    Worker -->|"download CSV"| S3
+    Worker -->|"upsert records"| SQLite
+```
+
+## Sequence Diagrams
+
+### Tenant Creation
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant API as Backend API
+    participant DB as SQLite
+    participant SFTPGo as SFTPGo Admin API
+
+    Admin->>API: POST /api/tenants<br/>{"username": "acme"}
+    API->>API: Validate request
+    API->>API: Generate tenant_id + password
+    API->>SFTPGo: POST /api/v2/users<br/>(username, password, S3 config, key_prefix=tenant_id/)
+    SFTPGo-->>API: 201 Created
+    API->>DB: INSERT INTO tenants (tenant_id, username, ...)
+    DB-->>API: tenant row
+    API-->>Admin: 201 {"tenant": {...}, "password": "...", "tenant_id": "..."}
+```
+
+### SFTP Authentication (External Auth Hook)
+
+```mermaid
+sequenceDiagram
+    actor User as SFTP Client
+    participant SFTPGo
+    participant API as Backend API
+    participant DB as SQLite
+
+    User->>SFTPGo: SFTP connect (username + password)
+    SFTPGo->>API: POST /api/auth/hook<br/>{"username", "password", "protocol", "ip"}
+    API->>DB: SELECT * FROM tenants WHERE username = ?
+    DB-->>API: tenant row
+    alt Password matches
+        API-->>SFTPGo: 200 {status: 1, username, home_dir, filesystem: {s3config}}
+        SFTPGo-->>User: Auth success, session starts
+    else Password mismatch
+        API-->>SFTPGo: 403 Forbidden
+        SFTPGo-->>User: Auth failed
+    end
+```
+
+### CSV Upload and Processing
+
+```mermaid
+sequenceDiagram
+    actor User as SFTP Client
+    participant SFTPGo
+    participant S3 as MinIO (S3)
+    participant API as Backend API
+    participant Worker as CSV Worker
+    participant DB as SQLite
+
+    User->>SFTPGo: SFTP PUT /data.csv
+    SFTPGo->>S3: PutObject(tenant_id/data.csv)
+    S3-->>SFTPGo: OK
+    SFTPGo->>API: POST /api/events/upload<br/>{"action": "upload", "username": "acme", "virtual_path": "/data.csv"}
+    API-->>SFTPGo: 200 {"status": "ok"}
+    API--)Worker: go ProcessUploadEvent(event)
+    Worker->>DB: GetTenantByUsername("acme")
+    DB-->>Worker: tenant (tenant_id)
+    Worker->>S3: GetObject(tenant_id/data.csv)
+    S3-->>Worker: CSV stream
+    loop Each CSV row
+        Worker->>DB: UpsertRecord(tenant_id, key, title, desc, category, value)
+    end
+    Note over Worker,DB: Records available via<br/>GET /api/tenants/{id}/records
+```
+
 ## Quick Start
 
 ```bash
