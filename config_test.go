@@ -51,7 +51,7 @@ func TestLoadConfigFromEnv(t *testing.T) {
 
 func TestEnvOr(t *testing.T) {
 	key := "TEST_ENVOR_KEY_" + t.Name()
-	os.Unsetenv(key)
+	_ = os.Unsetenv(key)
 
 	if got := envOr(key, "default"); got != "default" {
 		t.Errorf("envOr = %q, want %q", got, "default")

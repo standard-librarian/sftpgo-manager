@@ -18,7 +18,7 @@ func newMockSFTPGo(t *testing.T) *httptest.Server {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]any{
+		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "mock-token-123",
 			"expires_at":   "2099-01-01T00:00:00Z",
 		})
@@ -32,7 +32,7 @@ func newMockSFTPGo(t *testing.T) *httptest.Server {
 		switch r.Method {
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"username": "testuser",
 				"status":   1,
 			})
@@ -79,7 +79,7 @@ func TestSFTPGoClientGetTokenCaching(t *testing.T) {
 		if r.URL.Path == "/api/v2/token" {
 			callCount++
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]any{
+			_ = json.NewEncoder(w).Encode(map[string]any{
 				"access_token": "cached-token",
 				"expires_at":   "2099-01-01T00:00:00Z",
 			})

@@ -69,7 +69,7 @@ func (w *Worker) ProcessUploadEvent(event map[string]any) {
 		log.Printf("worker: failed to get object %s: %v", objectKey, err)
 		return
 	}
-	defer obj.Close()
+	defer func() { _ = obj.Close() }()
 
 	reader := csv.NewReader(obj)
 
