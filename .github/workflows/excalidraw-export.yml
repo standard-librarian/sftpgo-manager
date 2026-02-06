@@ -33,7 +33,7 @@ jobs:
               -i "$file" \
               --format svg \
               --dark-mode 0 \
-              --background 1 \
+              --background 0 \
               --embed-scene 0 \
               --scale 1 \
               -o "diagrams/exported/${name}-light.svg"
@@ -43,7 +43,7 @@ jobs:
               -i "$file" \
               --format svg \
               --dark-mode 1 \
-              --background 1 \
+              --background 0 \
               --embed-scene 0 \
               --scale 1 \
               -o "diagrams/exported/${name}-dark.svg"
