@@ -6,33 +6,41 @@ Built on top of [SFTPGo](https://github.com/drakkan/sftpgo) for SFTP and [MinIO]
 
 ## Architecture
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/architecture-dark.svg">
-  <img alt="Architecture diagram" src="diagrams/exported/architecture-light.svg">
-</picture>
+<a href="diagrams/exported/architecture-light.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/architecture-dark.svg">
+    <img alt="Architecture diagram" src="diagrams/exported/architecture-light.svg">
+  </picture>
+</a>
 
 ## Sequence Diagrams
 
 ### Tenant Creation
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-tenant-creation-dark.svg">
-  <img alt="Tenant creation sequence diagram" src="diagrams/exported/sequence-tenant-creation-light.svg">
-</picture>
+<a href="diagrams/exported/sequence-tenant-creation-light.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-tenant-creation-dark.svg">
+    <img alt="Tenant creation sequence diagram" src="diagrams/exported/sequence-tenant-creation-light.svg">
+  </picture>
+</a>
 
 ### SFTP Authentication (External Auth Hook)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-sftp-auth-dark.svg">
-  <img alt="SFTP authentication sequence diagram" src="diagrams/exported/sequence-sftp-auth-light.svg">
-</picture>
+<a href="diagrams/exported/sequence-sftp-auth-light.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-sftp-auth-dark.svg">
+    <img alt="SFTP authentication sequence diagram" src="diagrams/exported/sequence-sftp-auth-light.svg">
+  </picture>
+</a>
 
 ### CSV Upload and Processing
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-csv-processing-dark.svg">
-  <img alt="CSV upload and processing sequence diagram" src="diagrams/exported/sequence-csv-processing-light.svg">
-</picture>
+<a href="diagrams/exported/sequence-csv-processing-light.svg">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="diagrams/exported/sequence-csv-processing-dark.svg">
+    <img alt="CSV upload and processing sequence diagram" src="diagrams/exported/sequence-csv-processing-light.svg">
+  </picture>
+</a>
 
 ## Quick Start
 
