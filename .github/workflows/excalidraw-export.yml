@@ -35,6 +35,7 @@ jobs:
               --dark-mode 0 \
               --background 1 \
               --embed-scene 0 \
+              --scale 1 \
               -o "diagrams/exported/${name}-light.svg"
 
             echo "Exporting $name (dark)..."
@@ -44,6 +45,7 @@ jobs:
               --dark-mode 1 \
               --background 1 \
               --embed-scene 0 \
+              --scale 1 \
               -o "diagrams/exported/${name}-dark.svg"
           done
 
