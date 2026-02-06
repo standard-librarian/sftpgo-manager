@@ -1,0 +1,60 @@
+name: Export Excalidraw Diagrams
+
+on:
+  push:
+    paths:
+      - "diagrams/*.excalidraw"
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Playwright browsers
+        run: npx -y playwright install --with-deps firefox
+
+      - name: Export diagrams to SVG (light + dark)
+        run: |
+          mkdir -p diagrams/exported
+
+          for file in diagrams/*.excalidraw; do
+            [ -f "$file" ] || continue
+            name=$(basename "$file" .excalidraw)
+            echo "Exporting $name (light)..."
+            npx -y excalidraw-brute-export-cli \
+              -i "$file" \
+              --format svg \
+              --dark-mode 0 \
+              --background 1 \
+              --embed-scene 0 \
+              -o "diagrams/exported/${name}-light.svg"
+
+            echo "Exporting $name (dark)..."
+            npx -y excalidraw-brute-export-cli \
+              -i "$file" \
+              --format svg \
+              --dark-mode 1 \
+              --background 1 \
+              --embed-scene 0 \
+              -o "diagrams/exported/${name}-dark.svg"
+          done
+
+      - name: Commit exported SVGs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add diagrams/exported/
+          if git diff --staged --quiet; then
+            echo "No diagram changes to commit."
+          else
+            git commit -m "chore: export excalidraw diagrams to SVG [skip ci]"
+            git push
+          fi
